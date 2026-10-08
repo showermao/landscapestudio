@@ -3,8 +3,8 @@ title: LandscapeStudio
 emoji: 🌿
 colorFrom: gray
 colorTo: green
-sdk: docker
-app_port: 7860
+sdk: static
+app_file: site/index.html
 pinned: false
 short_description: 免費本機風景影像分析與語音朗讀
 ---
@@ -43,6 +43,7 @@ node --import tsx --test src/utils/localAnalysis.test.ts
 
 Space: https://huggingface.co/spaces/JhenYuMao/landscapestudio
 
-Docker 在 7860 埠提供網頁，不需要 GEMINI_API_KEY。
-使用有寫入權限的帳號登入後，執行 `git push origin main` 即可部署。
+Space 直接提供 site/ 的靜態網頁，不需要 CPU 配額、伺服器或 GEMINI_API_KEY。
+修改後執行 `npm run build:space`，將更新的 site/ 一併提交，
+再使用有寫入權限的帳號執行 `git push origin main` 即可部署。
 舊的 GEMINI_API_KEY Secret 可以移除。
