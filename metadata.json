@@ -1,9 +1,7 @@
 {
-  "name": "AI 風景設計師 · LandscapeStudio",
-  "description": "專業智能風景與景觀美學分析評分、圖文並茂的 Canvas 景觀儀表板與語音點評顧問",
+  "name": "風景設計師 · LandscapeStudio 免費版",
+  "description": "免費本機照片色彩、亮度與對比分析，圖文報告與瀏覽器語音朗讀，無需 API Key",
   "requestFramePermissions": [
     "camera"
-  ],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  ]
 }
-

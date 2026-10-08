@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { LandscapeAnalysisResult, PresetScenery } from "./types/landscape";
 import { PRESET_SCENERIES } from "./utils/presetSceneries";
+import { analyzeLocalPhoto } from "./utils/localAnalysis";
 import { LandscapeCanvasDashboard } from "./components/LandscapeCanvasDashboard";
 import { VoiceCriticPlayer } from "./components/VoiceCriticPlayer";
 import { LandscapeDetailTabs } from "./components/LandscapeDetailTabs";
@@ -40,6 +41,8 @@ export default function App() {
   const [selectedHotspotIndex, setSelectedHotspotIndex] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const analysisRequest = useRef(0);
+  const [isLocalReport, setIsLocalReport] = useState(false);
 
   // Trigger celebratory confetti for top scores
   useEffect(() => {
@@ -57,46 +60,37 @@ export default function App() {
     }
   }, [analysisResult]);
 
-  // Handle Photo Analysis via backend API
+  // Analyze uploaded photos locally, without API requests.
   const analyzePhoto = async (
     base64Data: string,
-    sceneType = "自然風光與庭院景觀"
   ) => {
+    const request = ++analysisRequest.current;
     setIsAnalyzing(true);
     setAnalysisError(null);
-    setCurrentImage(base64Data);
 
     try {
-      const response = await fetch("/api/analyze-landscape", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image: base64Data,
-          sceneType,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "分析請求失敗");
-      }
-
-      setAnalysisResult(data.analysis);
+      const analysis = await analyzeLocalPhoto(base64Data);
+      if (request !== analysisRequest.current) return;
+      setCurrentImage(base64Data);
+      setAnalysisResult(analysis);
+      setIsLocalReport(true);
+      setSelectedHotspotIndex(null);
     } catch (err: any) {
-      console.warn("Analysis error, falling back gracefully:", err);
+      if (request !== analysisRequest.current) return;
       setAnalysisError(
-        err?.message || "風景分析連線發生問題，請檢查網路或稍候重試"
+        err?.message || "照片分析失敗，請選擇其他圖片。"
       );
-      // Fall back to closest preset if needed
-      setAnalysisResult(PRESET_SCENERIES[0].analysis);
     } finally {
-      setIsAnalyzing(false);
+      if (request === analysisRequest.current) setIsAnalyzing(false);
     }
   };
 
   // Handle preset select
   const handleSelectPreset = (preset: PresetScenery) => {
+    analysisRequest.current++;
+    setIsAnalyzing(false);
+    setIsLocalReport(false);
+    setSelectedHotspotIndex(null);
     setCurrentScenery(preset);
     setCurrentImage(preset.imageUrl);
     setAnalysisResult(preset.analysis);
@@ -175,14 +169,14 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-base tracking-tight text-neutral-100">
-                  AI 風景設計師
+                  風景設計師 · 免費版
                 </span>
                 <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/50 font-mono">
                   LANDSCAPE STUDIO
                 </span>
               </div>
               <p className="text-[11px] text-neutral-400 hidden sm:block">
-                拍照即評 · 圖文並茂 Canvas 儀表板 · 智能語音造園顧問
+                本機影像分析 · 無需 API Key · 語音朗讀
               </p>
             </div>
           </div>
@@ -256,6 +250,11 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 flex flex-col gap-6">
+        <p className="text-xs text-neutral-400" role="status">
+          {isLocalReport
+            ? "照片在瀏覽器內分析，不會上傳。分數依亮度與對比計算；綠色比例不代表植栽品質，其餘未評估項目顯示 0。色票只列前四大色群，比例可能不滿 100%。"
+            : "目前顯示預設示範報告。上傳或拍攝照片即可免費分析亮度、對比與色彩；不提供 AI 植物辨識或專業景觀評鑑。"}
+        </p>
         {/* Error Alert if any */}
         {analysisError && (
           <div className="p-4 bg-amber-950/40 border border-amber-800/50 rounded-xl flex items-center justify-between text-xs text-amber-200">
@@ -275,10 +274,10 @@ export default function App() {
             <div className="w-12 h-12 rounded-full border-4 border-emerald-500/30 border-t-emerald-400 animate-spin" />
             <div>
               <h3 className="text-base font-bold text-neutral-100">
-                景觀美學大師正在審視眼前風景...
+                正在分析照片的色彩與亮度...
               </h3>
               <p className="text-xs text-neutral-400 mt-1 max-w-md">
-                正在進行三維空間縱深透視、六大美學維度解構、自然色譜提煉與語音評語撰擬
+                分析在瀏覽器內完成，不需要 API Key
               </p>
             </div>
           </div>
@@ -288,7 +287,7 @@ export default function App() {
         <VoiceCriticPlayer
           text={analysisResult.speechCritique}
           autoPlay={false}
-          architectName="景觀建築大師 · 首席美學評委"
+          architectName={isLocalReport ? "免費影像分析 · 語音朗讀" : "示範報告 · 語音朗讀"}
         />
 
         {/* CENTERPIECE: CANVAS DASHBOARD ("以圖文並茂的儀表板呈現於 Canvas") */}
@@ -324,7 +323,6 @@ export default function App() {
           <LandscapeDetailTabs
             analysis={analysisResult}
             isAnalyzing={isAnalyzing}
-            onSimulateScene={(scene) => analyzePhoto(currentImage, scene)}
           />
         </div>
       </main>
@@ -335,9 +333,9 @@ export default function App() {
           <div className="flex items-center gap-2">
             <TreePine className="w-4 h-4 text-emerald-400" />
             <span className="font-semibold text-neutral-300">
-              AI 風景設計師 · LandscapeStudio
+              風景設計師 · LandscapeStudio 免費版
             </span>
-            <span>· 景觀美學大師在線顧問</span>
+            <span>· 本機影像分析與語音朗讀</span>
           </div>
           <div>
             <span>即時 Canvas 渲染 · 智慧空間分析 · Web Speech 語音合成</span>
