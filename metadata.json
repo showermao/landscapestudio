@@ -1,0 +1,9 @@
+{
+  "name": "AI 風景設計師 · LandscapeStudio",
+  "description": "專業智能風景與景觀美學分析評分、圖文並茂的 Canvas 景觀儀表板與語音點評顧問",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
